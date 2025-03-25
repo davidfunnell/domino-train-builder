@@ -1,101 +1,178 @@
-import Image from "next/image";
+'use client';
 
+// page.js: Main page for the Domino Train Builder
+
+import { useState, useEffect } from 'react';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { findAllLinkedLists } from './utils/dominoUtils';
+import InputSection from './components/InputSection';
+import DominoPaths from './components/DominoPaths';
+import TotalSum from './components/TotalSum';
+import Settings from './components/Settings';
+import Link from 'next/link';
+import { useToast } from './contexts/ToastContext';
+
+/**
+ * The main page component that orchestrates the Domino Train Builder functionality.
+ */
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    // Hook for localStorage operations
+    const { getItem, setItem } = useLocalStorage();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+    // set variables with initial values from localStorage
+    const [startingValue, setStartingValue] = useState(12);
+    const [nodes, setNodes] = useState([]);
+    const [maxValue, setMaxValue] = useState(12);
+    const [dominoes, setDominoes] = useState([]);
+    const [showSettings, setShowSettings] = useState(false);
+    const [loadedLocalStorage, setLoadedLocalStorage] = useState(false);
+
+    // add context for toast notifications
+    const { showToast } = useToast();
+
+    // Load from localStorage only on client-side mount
+    useEffect(() => {
+        const savedNodes = getItem('nodes', []);
+        const savedMaxValue = getItem('maxValue', 12);
+        const savedStartingValue = getItem('startingValue', 12)
+        setStartingValue(savedStartingValue)
+        setNodes(savedNodes);
+        setMaxValue(savedMaxValue);
+    }, [getItem]);
+
+    // Update domino paths when nodes or startingValue changes
+    useEffect(() => {
+        if (startingValue !== null) {
+            const result = findAllLinkedLists(nodes, startingValue);
+            setDominoes(result);
+        } else {
+            setDominoes([]);
+        }
+        setLoadedLocalStorage(true);
+    }, [nodes, startingValue]);
+
+    // Sync state with localStorage
+    useEffect(() => {
+        if (loadedLocalStorage) {
+            setItem('startingValue', startingValue);
+            setItem('nodes', nodes);
+            setItem('maxValue', maxValue);
+        }
+    }, [startingValue, nodes, maxValue, setItem, loadedLocalStorage]);
+
+    // Set the starting value for the train
+    const handleSetStartingValue = (value) => {
+        setStartingValue(value);
+    };
+
+    // Add a new domino to the nodes list
+    const addDomino = (h, t) => {
+        const exists = nodes.some(
+            ([a, b]) => (a === h && b === t) || (a === t && b === h)
+        );
+        if (exists) {
+            showToast('Domino already exists', 'error');
+            return;
+        }
+        setNodes((prev) => [...prev, [h, t]]);
+        setLoadedLocalStorage(true);
+    };
+
+    // Delete a domino from the nodes list
+    const deleteDomino = (h, t) => {
+        setNodes((prevNodes) => {
+            const newNodes = prevNodes.filter(
+                ([head, tail]) => !(head === h && tail === t) && !(head === t && tail === h)
+            );
+            // Update startingValue if the deleted domino affects the longest train
+            if (
+                startingValue !== null &&
+                dominoes.length > 0 &&
+                dominoes[0].length > 0
+            ) {
+                const longestTrain = dominoes[0];
+                const headDomino = longestTrain[0];
+                if (
+                    (headDomino[0] === h && headDomino[1] === t) ||
+                    (headDomino[0] === t && headDomino[1] === h)
+                ) {
+                    const newStartingValue = headDomino[1];
+                    setStartingValue(newStartingValue);
+                }
+            }
+            return newNodes;
+        });
+        setLoadedLocalStorage(true);
+    };
+
+    // Handle maxValue change from settings
+    const handleMaxValueChange = (e) => {
+        setMaxValue(Number(e.target.value));
+        setShowSettings(false);
+        setLoadedLocalStorage(true);
+    };
+
+    // Reset all state and clear localStorage
+    const resetState = () => {
+        setNodes([]);
+        setDominoes([]);
+        setShowSettings(false);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('nodes');
+            localStorage.removeItem('startingValue');
+            localStorage.removeItem('maxValue');
+        }
+        setLoadedLocalStorage(true);
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 flex flex-col items-center justify-center p-6 font-sans">
+            <h1 className="text-4xl font-bold text-gray-800 mb-8">
+                Domino Train Builder
+            </h1>
+
+            <InputSection
+                maxValue={maxValue}
+                onSetStartingValue={handleSetStartingValue}
+                onAddDomino={addDomino}
+                startingValue={startingValue}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+
+            {startingValue !== null && (
+                <DominoPaths
+                    dominoes={dominoes}
+                    startingValue={startingValue}
+                    deleteDomino={deleteDomino}
+                />
+            )}
+
+            <TotalSum nodes={nodes} />
+
+            {/* Navigation and control buttons */}
+            <div className="fixed bottom-6 right-6 flex space-x-4">
+                <Link href="/scores">
+                    <button className="p-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md">
+                        Scores
+                    </button>
+                </Link>
+                <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="p-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md"
+                >
+                    Settings
+                </button>
+                <button
+                    onClick={resetState}
+                    className="p-3 bg-red-600 text-white rounded-full font-semibold hover:bg-red-700 transition-all shadow-md"
+                >
+                    Reset
+                </button>
+            </div>
+
+            {/* Settings dropdown */}
+            {showSettings && (
+                <Settings maxValue={maxValue} onMaxValueChange={handleMaxValueChange} />
+            )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
