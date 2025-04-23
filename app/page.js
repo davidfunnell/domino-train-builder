@@ -11,6 +11,7 @@ import TotalSum from './components/TotalSum';
 import Settings from './components/Settings';
 import Link from 'next/link';
 import { useToast } from './contexts/ToastContext';
+import { useTheme } from './contexts/ThemeContext';
 
 /**
  * The main page component that orchestrates the Domino Train Builder functionality.
@@ -18,6 +19,7 @@ import { useToast } from './contexts/ToastContext';
 export default function Home() {
     // Hook for localStorage operations
     const { getItem, setItem } = useLocalStorage();
+    const { darkMode } = useTheme();
 
     // set variables with initial values from localStorage
     const [startingValue, setStartingValue] = useState(12);
@@ -126,8 +128,8 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 flex flex-col items-center justify-center p-6 font-sans">
-            <h1 className="text-4xl font-bold text-gray-800 mb-8">
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center p-6 font-sans">
+            <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8">
                 Domino Train Builder
             </h1>
 
@@ -151,19 +153,19 @@ export default function Home() {
             {/* Navigation and control buttons */}
             <div className="fixed bottom-6 right-6 flex space-x-4">
                 <Link href="/scores">
-                    <button className="p-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md">
+                    <button className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold transition-all shadow-md">
                         Scores
                     </button>
                 </Link>
                 <button
                     onClick={() => setShowSettings(!showSettings)}
-                    className="p-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md"
+                    className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold transition-all shadow-md"
                 >
                     Settings
                 </button>
                 <button
                     onClick={resetState}
-                    className="p-3 bg-red-600 text-white rounded-full font-semibold hover:bg-red-700 transition-all shadow-md"
+                    className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition-all shadow-md"
                 >
                     Reset
                 </button>

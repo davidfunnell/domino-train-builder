@@ -113,7 +113,13 @@ export function findBestPath(nodes, available, startingHead = null) {
     if (!allPaths.length) return [];
     let maxLen = Math.max(...allPaths.map((p) => p.length));
     let longestPaths = allPaths.filter((p) => p.length === maxLen);
-    return longestPaths[0].map(([h, t, i]) => [h, t, i]);
+    // Select the longest path with the highest pip sum
+    let bestPath = longestPaths.reduce((best, path) => {
+        const pathPoints = path.reduce((sum, [h, t]) => sum + h + t, 0);
+        const bestPoints = best.reduce((sum, [h, t]) => sum + h + t, 0);
+        return pathPoints > bestPoints ? path : best;
+    }, longestPaths[0]);
+    return bestPath.map(([h, t, i]) => [h, t, i]);
 }
 
 /**

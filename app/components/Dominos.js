@@ -3,6 +3,7 @@
 // Domino.js: A reusable component to display a single domino tile with a delete button
 
 import React from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Renders a domino tile with head (h) and tail (t) values and a delete button.
@@ -11,14 +12,16 @@ import React from 'react';
  * @param {function} onDelete - Callback to remove the domino when the delete button is clicked.
  */
 export default function Domino({ h, t, onDelete }) {
+    const { darkMode } = useTheme();
+
     return (
         <div className="relative inline-block mx-2">
             {/* Domino tile with two sections for head and tail */}
-            <div className="flex w-16 h-10 bg-white border border-gray-200 rounded-md shadow-sm">
-                <div className="flex-1 flex items-center justify-center border-r border-gray-200 text-gray-800 font-medium">
+            <div className="flex w-16 h-10 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-sm">
+                <div className="flex-1 flex items-center justify-center border-r border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 font-medium">
                     {h}
                 </div>
-                <div className="flex-1 flex items-center justify-center text-gray-800 font-medium">
+                <div className="flex-1 flex items-center justify-center text-gray-800 dark:text-gray-200 font-medium">
                     {t}
                 </div>
             </div>

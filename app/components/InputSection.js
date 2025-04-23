@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Handles the input forms for setting the starting value and adding new dominoes.
@@ -17,6 +18,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
     const [newHead, setNewHead] = useState('');
     const [newTail, setNewTail] = useState('');
     const [error, setError] = useState('');
+    const { darkMode } = useTheme();
 
     // add context for toast notifications
     const { showToast } = useToast();
@@ -76,7 +78,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
     };
 
     return (
-        <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
             {/* Starting Value Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <input
@@ -84,7 +86,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder={`Enter starting value (0-${maxValue})`}
-                    className="w-full p-3 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 placeholder-gray-400 transition-all"
+                    className="w-full p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                 />
                 {error && <p className="text-red-500 text-sm">{error}</p>}
                 <button
@@ -97,7 +99,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
 
             {/* Add Domino Form */}
             <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-700 mb-3">Add Domino</h2>
+                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Add Domino</h2>
                 <form onSubmit={addDomino} className="flex space-x-3">
                     <input
                         ref={headInputRef}
@@ -106,7 +108,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
                         onChange={(e) => setNewHead(e.target.value)}
                         onKeyDown={handleHeadKeyPress}
                         placeholder={`Head (0-${maxValue})`}
-                        className="w-1/3 p-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 placeholder-gray-400 transition-all"
+                        className="w-1/3 p-2 rounded-md border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <input
                         ref={tailInputRef}
@@ -115,7 +117,7 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
                         onChange={(e) => setNewTail(e.target.value)}
                         onKeyDown={handleTailKeyPress}
                         placeholder={`Tail (0-${maxValue})`}
-                        className="w-1/3 p-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 placeholder-gray-400 transition-all"
+                        className="w-1/3 p-2 rounded-md border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <button
                         type="submit"

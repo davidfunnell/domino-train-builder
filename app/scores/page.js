@@ -8,12 +8,14 @@ import ScoresTable from '../components/ScoresTable';
 import Settings from '../components/Settings';
 import Link from 'next/link';
 import { useToast } from '../contexts/ToastContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * The scores page component for tracking player scores in the Mexican Train game.
  */
 export default function Scores() {
     const { getItem, setItem } = useLocalStorage();
+    const { darkMode } = useTheme();
 
     // Initialize state with defaults for consistent server/client rendering
     const [maxValue, setMaxValue] = useState(12);
@@ -60,7 +62,7 @@ export default function Scores() {
         setLoadedLocalStorage(true);
     };
 
-    // Update a player’s score for a specific round
+    // Update a player's score for a specific round
     const handleScoreChange = (playerName, round, value) => {
         setPlayers((prevPlayers) => {
             const newPlayers = prevPlayers.map((p) => {
@@ -110,20 +112,20 @@ export default function Scores() {
     const rounds = Array.from({ length: maxValue + 1 }, (_, i) => maxValue - i);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 flex flex-col items-center justify-center p-6 font-sans">
-            <h1 className="text-4xl font-bold text-gray-800 mb-8">
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center p-6 font-sans">
+            <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8">
                 Mexican Train Scores
             </h1>
 
             {/* Player addition form */}
-            <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
                 <div className="flex space-x-3">
                     <input
                         type="text"
                         value={newPlayerName}
                         onChange={(e) => setNewPlayerName(e.target.value)}
                         placeholder="Enter player name"
-                        className="w-2/3 p-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 placeholder-gray-400 transition-all"
+                        className="w-2/3 p-2 rounded-md border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <button
                         onClick={addPlayer}

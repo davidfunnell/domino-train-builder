@@ -4,6 +4,7 @@
 
 import React from 'react';
 import Domino from './Dominos';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Renders all domino paths (trains) computed from the nodes and starting value.
@@ -12,16 +13,18 @@ import Domino from './Dominos';
  * @param {function} deleteDomino - Callback to remove a domino from the list.
  */
 export default function DominoPaths({ dominoes, startingValue, deleteDomino }) {
+    const { darkMode } = useTheme();
+
     return (
-        <div className="w-full max-w-3xl bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+        <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
                 Paths Starting from {startingValue}
             </h2>
             {dominoes.length > 0 ? (
                 <>
-                    {/* Warn if the first domino doesn’t match the starting value */}
+                    {/* Warn if the first domino doesn't match the starting value */}
                     {dominoes[0][0][0] !== startingValue && (
-                        <p className="text-red-500 text-sm mb-3">
+                        <p className="text-red-500 dark:text-red-400 text-sm mb-3">
                             No paths start with {startingValue}, showing the best possible paths.
                         </p>
                     )}
@@ -35,7 +38,7 @@ export default function DominoPaths({ dominoes, startingValue, deleteDomino }) {
                     ))}
                 </>
             ) : (
-                <p className="text-gray-500">No paths found.</p>
+                <p className="text-gray-500 dark:text-gray-400">No paths found.</p>
             )}
         </div>
     );
