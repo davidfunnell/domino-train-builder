@@ -54,24 +54,29 @@ The scoring system supports:
 
 ## Getting Started
 
-First, run the development server:
+Requires Node 20.9 or newer.
+
+Install dependencies and start the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Run the tests with:
+Use npm rather than yarn or pnpm. `package.json` pins a patched transitive
+dependency through npm's `overrides` field, which the other package managers
+ignore in favour of their own equivalents.
+
+Other scripts:
 
 ```bash
-npm test
+npm test            # run the test suite
+npm run test:watch  # re-run tests on change
+npm run lint        # lint with eslint
+npm run build       # production build
+npm start           # serve the production build (after a build)
 ```
 
 ## Technologies Used
