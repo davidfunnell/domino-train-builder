@@ -1,8 +1,9 @@
 'use client'
 // ToastContext.js
-import { createContext, useContext, useState, useEffect } from 'react';
 
-const ToastContext = createContext();
+import { createContext, useCallback, useContext, useState, useEffect } from 'react';
+
+const ToastContext = createContext({ showToast: () => { } });
 
 export function ToastProvider({ children }) {
     const [toast, setToast] = useState(null);
@@ -18,13 +19,17 @@ export function ToastProvider({ children }) {
     }, [toast]);
 
     // Function to trigger a toast with a message and type
-    const showToast = (message, type = 'info') => {
+    const showToast = useCallback((message, type = 'info') => {
+        // A fresh object each time so repeating the same message restarts the timer.
         setToast({ message, type });
-    };
+    }, []);
 
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
+            <div role="status" aria-live="polite" className="sr-only">
+                {toast ? toast.message : ''}
+            </div>
             {toast && (
                 <div
                     className={`fixed bottom-5 left-6 p-4 rounded shadow-lg text-white cursor-pointer ${toast.type === 'success'

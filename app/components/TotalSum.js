@@ -3,15 +3,12 @@
 // TotalSum.js: Displays the total sum of all domino values
 
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Calculates and displays the sum of all head and tail values in the dominoes.
  * @param {array} nodes - Array of [head, tail] pairs representing all dominoes.
  */
 export default function TotalSum({ nodes }) {
-    const { darkMode } = useTheme();
-
     // Compute the total sum of all domino values
     const totalSum = nodes.reduce((acc, [h, t]) => acc + h + t, 0);
 

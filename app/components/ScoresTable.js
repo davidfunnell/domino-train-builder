@@ -2,8 +2,8 @@
 
 // ScoresTable.js: Displays and manages the scores table for players
 
-import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import React, { useState } from 'react';
+import Domino from './Dominos';
 
 /**
  * Renders a table to display and edit player scores for each round.
@@ -13,7 +13,28 @@ import { useTheme } from '../contexts/ThemeContext';
  * @param {function} removePlayer - Callback to remove a player.
  */
 export default function ScoresTable({ players, rounds, handleScoreChange, removePlayer }) {
-    const { darkMode } = useTheme();
+    // Holds what is currently typed in a cell so the field can be emptied
+    // mid-edit instead of being pinned to the stored number.
+    const [drafts, setDrafts] = useState({});
+    const cellKey = (name, round) => `${name}:${round}`;
+
+    const startEditing = (name, round, raw) => {
+        setDrafts((prev) => ({ ...prev, [cellKey(name, round)]: raw }));
+        handleScoreChange(name, round, raw);
+    };
+
+    const finishEditing = (name, round) => {
+        setDrafts((prev) => {
+            const next = { ...prev };
+            delete next[cellKey(name, round)];
+            return next;
+        });
+    };
+
+    const displayedScore = (player, round) => {
+        const key = cellKey(player.name, round);
+        return key in drafts ? drafts[key] : player.scores[round] ?? 0;
+    };
 
     return (
         <div className="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 overflow-x-auto mb-20">
@@ -31,9 +52,10 @@ export default function ScoresTable({ players, rounds, handleScoreChange, remove
                                 {player.name}
                                 <button
                                     onClick={() => removePlayer(player.name)}
+                                    aria-label={`Remove ${player.name}`}
                                     className="ml-2 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-500"
                                 >
-                                    x
+                                    <span aria-hidden="true">x</span>
                                 </button>
                             </th>
                         ))}
@@ -44,15 +66,8 @@ export default function ScoresTable({ players, rounds, handleScoreChange, remove
                         <tr key={round}>
                             {/* Display round number as a domino-like tile */}
                             <td className="px-4 py-2 whitespace-nowrap text-center text-sm text-gray-700 dark:text-gray-300">
-                                <div className="relative inline-block py-2">
-                                    <div className="flex w-16 h-10 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-sm">
-                                        <div className="flex-1 flex items-center justify-center border-r border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 font-medium">
-                                            {round}
-                                        </div>
-                                        <div className="flex-1 flex items-center justify-center text-gray-800 dark:text-gray-200 font-medium">
-                                            {round}
-                                        </div>
-                                    </div>
+                                <div className="py-2">
+                                    <Domino h={round} t={round} />
                                 </div>
                             </td>
                             {/* Score inputs for each player */}
@@ -61,9 +76,12 @@ export default function ScoresTable({ players, rounds, handleScoreChange, remove
                                     <input
                                         type="number"
                                         min="0"
+                                        inputMode="numeric"
+                                        aria-label={`${player.name} score for the double ${round} round`}
                                         className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded text-center text-gray-700 dark:text-gray-200 dark:bg-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
-                                        value={player.scores[round]}
-                                        onChange={(e) => handleScoreChange(player.name, round, e.target.value)}
+                                        value={displayedScore(player, round)}
+                                        onChange={(e) => startEditing(player.name, round, e.target.value)}
+                                        onBlur={() => finishEditing(player.name, round)}
                                     />
                                 </td>
                             ))}

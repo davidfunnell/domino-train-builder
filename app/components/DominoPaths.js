@@ -4,7 +4,6 @@
 
 import React from 'react';
 import Domino from './Dominos';
-import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Renders all domino paths (trains) computed from the nodes and starting value.
@@ -13,8 +12,6 @@ import { useTheme } from '../contexts/ThemeContext';
  * @param {function} deleteDomino - Callback to remove a domino from the list.
  */
 export default function DominoPaths({ dominoes, startingValue, deleteDomino }) {
-    const { darkMode } = useTheme();
-
     return (
         <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">

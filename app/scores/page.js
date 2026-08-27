@@ -8,14 +8,12 @@ import ScoresTable from '../components/ScoresTable';
 import Settings from '../components/Settings';
 import Link from 'next/link';
 import { useToast } from '../contexts/ToastContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * The scores page component for tracking player scores in the Mexican Train game.
  */
 export default function Scores() {
     const { getItem, setItem } = useLocalStorage();
-    const { darkMode } = useTheme();
 
     // Initialize state with defaults for consistent server/client rendering
     const [maxValue, setMaxValue] = useState(12);
@@ -27,12 +25,12 @@ export default function Scores() {
     // add context for toast notifications
     const { showToast } = useToast();
 
-    // Load from localStorage only on client-side mount
+    // Load from localStorage only on client-side mount. The flag is set here so
+    // every later change is persisted, including ones that only reset scores.
     useEffect(() => {
-        const savedMaxValue = getItem('maxValue', 12);
-        const savedPlayers = getItem('players', []);
-        setMaxValue(savedMaxValue);
-        setPlayers(savedPlayers);
+        setMaxValue(getItem('maxValue', 12));
+        setPlayers(getItem('players', []));
+        setLoadedLocalStorage(true);
     }, [getItem]);
 
     // Sync state with localStorage when players or maxValue change
@@ -46,36 +44,32 @@ export default function Scores() {
     // Add a new player with an initialized scores array
     const addPlayer = () => {
         const name = newPlayerName.trim();
-        if (name && !players.some((p) => p.name === name)) {
-            const newPlayer = { name, scores: Array(maxValue + 1).fill(0) };
-            setPlayers((prev) => [...prev, newPlayer]);
-            setNewPlayerName('');
-        } else if (players.some((p) => p.name === name)) {
+        if (!name) return;
+        if (players.some((p) => p.name === name)) {
             showToast('Player name already exists.', 'error');
+            return;
         }
-        setLoadedLocalStorage(true);
+        setPlayers((prev) => [...prev, { name, scores: Array(maxValue + 1).fill(0) }]);
+        setNewPlayerName('');
     };
 
     // Remove a player by name
     const removePlayer = (name) => {
         setPlayers((prev) => prev.filter((p) => p.name !== name));
-        setLoadedLocalStorage(true);
     };
 
     // Update a player's score for a specific round
     const handleScoreChange = (playerName, round, value) => {
-        setPlayers((prevPlayers) => {
-            const newPlayers = prevPlayers.map((p) => {
-                if (p.name === playerName) {
-                    const newScores = [...p.scores];
-                    newScores[round] = parseInt(value) || 0;
-                    return { ...p, scores: newScores };
-                }
-                return p;
-            });
-            return newPlayers;
-        });
-        setLoadedLocalStorage(true);
+        const parsed = parseInt(value, 10);
+        const score = Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+        setPlayers((prevPlayers) =>
+            prevPlayers.map((p) => {
+                if (p.name !== playerName) return p;
+                const newScores = [...p.scores];
+                newScores[round] = score;
+                return { ...p, scores: newScores };
+            })
+        );
     };
 
     // Reset all player scores to zero
@@ -92,20 +86,17 @@ export default function Scores() {
     const handleMaxValueChange = (e) => {
         const newMaxValue = Number(e.target.value);
         setMaxValue(newMaxValue);
-        setPlayers((prevPlayers) => {
-            return prevPlayers.map((player) => {
+        setPlayers((prevPlayers) =>
+            prevPlayers.map((player) => {
                 const currentScores = player.scores || [];
                 const newScores = Array(newMaxValue + 1).fill(0);
                 currentScores.forEach((score, index) => {
-                    if (index <= newMaxValue) {
-                        newScores[index] = score;
-                    }
+                    if (index <= newMaxValue) newScores[index] = score;
                 });
                 return { ...player, scores: newScores };
-            });
-        });
+            })
+        );
         setShowSettings(false);
-        setLoadedLocalStorage(true);
     };
 
     // Generate rounds array from maxValue to 0
@@ -119,21 +110,28 @@ export default function Scores() {
 
             {/* Player addition form */}
             <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                <div className="flex space-x-3">
+                <form
+                    className="flex space-x-3"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        addPlayer();
+                    }}
+                >
                     <input
                         type="text"
                         value={newPlayerName}
                         onChange={(e) => setNewPlayerName(e.target.value)}
                         placeholder="Enter player name"
+                        aria-label="New player name"
                         className="w-2/3 p-2 rounded-md border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <button
-                        onClick={addPlayer}
+                        type="submit"
                         className="w-1/3 p-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 transition-all shadow-sm"
                     >
                         Add Player
                     </button>
-                </div>
+                </form>
             </div>
 
             {/* Scores table */}
@@ -155,12 +153,14 @@ export default function Scores() {
                 </Link>
                 <button
                     onClick={() => setShowSettings(!showSettings)}
+                    aria-expanded={showSettings}
                     className="p-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md"
                 >
                     Settings
                 </button>
                 <button
                     onClick={resetGame}
+                    aria-label="Reset all scores to zero"
                     className="p-3 bg-red-600 text-white rounded-full font-semibold hover:bg-red-700 transition-all shadow-md"
                 >
                     Reset Game

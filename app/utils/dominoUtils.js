@@ -1,5 +1,14 @@
 // dominoUtils.js: Utility functions for domino path calculations
 
+// Cap on how many search states we'll expand before returning the best train
+// found so far. Without it, a well-connected hand can blow up combinatorially
+// and lock the browser tab.
+const SEARCH_BUDGET = 500000;
+
+// Bitmasks are only safe up to 30 dominoes; past that we fall back to the
+// plain search without transposition pruning.
+const MAX_BITMASK_SIZE = 30;
+
 /**
  * Orients a domino path for consistent display based on a fixed starting value or sum distribution.
  * @param {array} path - Array of [h, t] pairs representing a domino path.
@@ -66,60 +75,130 @@ export function orientPath(path, fixedStart = null, isLongestTrain = false) {
 }
 
 /**
- * Finds the longest possible path from available dominoes.
+ * Finds the longest possible path from available dominoes, breaking ties by
+ * highest pip total.
+ *
+ * Depth-first search that keeps only the best path found rather than
+ * enumerating every path. Two things keep it fast: a transposition table
+ * (reaching the same tail value with the same set of used dominoes always
+ * yields the same continuations and the same pip sum, so the repeat is
+ * skipped) and an early exit once a path uses every available domino.
+ *
  * @param {array} nodes - Array of [h, t] pairs representing all dominoes.
  * @param {Set} available - Set of indices of available dominoes.
  * @param {number|null} startingHead - Desired starting value, if any.
- * @returns {array} - The longest path with [h, t, index] triplets.
+ * @returns {array} - The best path with [h, t, index] triplets.
  */
 export function findBestPath(nodes, available, startingHead = null) {
-    let allPaths = [];
-    function backtrack(path, used) {
-        let extended = false;
-        for (let i of [...available].filter((x) => !used.has(x))) {
-            let [a, b] = nodes[i];
-            let lastTail = path[path.length - 1][1];
-            if (lastTail === a) {
-                let newPath = [...path, [a, b, i]];
-                used.add(i);
-                backtrack(newPath, used);
-                used.delete(i);
-                extended = true;
-            } else if (lastTail === b) {
-                let newPath = [...path, [b, a, i]];
-                used.add(i);
-                backtrack(newPath, used);
-                used.delete(i);
-                extended = true;
+    const indices = [...available];
+    const total = indices.length;
+    if (!total) return [];
+
+    // Map each value to the dominoes that carry it, so each step only looks at
+    // tiles that can actually connect.
+    const byValue = new Map();
+    const addToValue = (value, index) => {
+        const bucket = byValue.get(value);
+        if (bucket) bucket.push(index);
+        else byValue.set(value, [index]);
+    };
+    for (const i of indices) {
+        const [a, b] = nodes[i];
+        addToValue(a, i);
+        if (b !== a) addToValue(b, i);
+    }
+
+    const useBitmask = total <= MAX_BITMASK_SIZE;
+    const bitOf = new Map();
+    if (useBitmask) indices.forEach((i, position) => bitOf.set(i, position));
+
+    const path = [];
+    const used = new Set();
+    const visited = new Set();
+    let mask = 0;
+    let best = [];
+    let bestLength = 0;
+    let bestSum = -1;
+    let budget = SEARCH_BUDGET;
+    let done = false;
+
+    function record(sum) {
+        if (path.length > bestLength || (path.length === bestLength && sum > bestSum)) {
+            bestLength = path.length;
+            bestSum = sum;
+            best = path.map((triple) => [...triple]);
+            // Every domino is in the train: no longer path exists, and the pip
+            // sum is fixed, so this is optimal.
+            if (bestLength === total) done = true;
+        }
+    }
+
+    function search(tail, sum) {
+        if (done) return;
+        if (budget-- <= 0) {
+            done = true;
+            return;
+        }
+        record(sum);
+
+        const neighbours = byValue.get(tail);
+        if (!neighbours) return;
+
+        for (const i of neighbours) {
+            if (used.has(i)) continue;
+            const [a, b] = nodes[i];
+            const nextTail = a === tail ? b : a;
+
+            const previousMask = mask;
+            if (useBitmask) {
+                const nextMask = mask | (1 << bitOf.get(i));
+                // Multiplying by 2^31 keeps tail and mask in separate ranges of
+                // a single safe integer, which is cheaper than a string key.
+                const key = nextTail * 2147483648 + nextMask;
+                if (visited.has(key)) continue;
+                visited.add(key);
+                mask = nextMask;
             }
-        }
-        if (!extended) allPaths.push([...path]);
-    }
 
-    if (startingHead !== null) {
-        for (let i of available) {
-            let [a, b] = nodes[i];
-            if (a === startingHead) backtrack([[a, b, i]], new Set([i]));
-            else if (b === startingHead) backtrack([[b, a, i]], new Set([i]));
-        }
-    } else {
-        for (let i of available) {
-            let [a, b] = nodes[i];
-            backtrack([[a, b, i]], new Set([i]));
-            backtrack([[b, a, i]], new Set([i]));
+            used.add(i);
+            path.push([tail, nextTail, i]);
+            search(nextTail, sum + tail + nextTail);
+            path.pop();
+            used.delete(i);
+            mask = previousMask;
+
+            if (done) return;
         }
     }
 
-    if (!allPaths.length) return [];
-    let maxLen = Math.max(...allPaths.map((p) => p.length));
-    let longestPaths = allPaths.filter((p) => p.length === maxLen);
-    // Select the longest path with the highest pip sum
-    let bestPath = longestPaths.reduce((best, path) => {
-        const pathPoints = path.reduce((sum, [h, t]) => sum + h + t, 0);
-        const bestPoints = best.reduce((sum, [h, t]) => sum + h + t, 0);
-        return pathPoints > bestPoints ? path : best;
-    }, longestPaths[0]);
-    return bestPath.map(([h, t, i]) => [h, t, i]);
+    // Order the starting tiles by pip value so a strong train is found early,
+    // which matters if the search budget runs out.
+    const starts = [];
+    for (const i of indices) {
+        const [a, b] = nodes[i];
+        if (startingHead === null) {
+            starts.push([a, b, i]);
+            if (a !== b) starts.push([b, a, i]);
+        } else if (a === startingHead) {
+            starts.push([a, b, i]);
+        } else if (b === startingHead) {
+            starts.push([b, a, i]);
+        }
+    }
+    starts.sort((x, y) => y[0] + y[1] - (x[0] + x[1]));
+
+    for (const [head, tailValue, i] of starts) {
+        if (done) break;
+        used.add(i);
+        path.push([head, tailValue, i]);
+        if (useBitmask) mask = 1 << bitOf.get(i);
+        search(tailValue, head + tailValue);
+        path.pop();
+        used.delete(i);
+        mask = 0;
+    }
+
+    return best;
 }
 
 /**

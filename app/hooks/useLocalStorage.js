@@ -10,19 +10,25 @@ export function useLocalStorage() {
     // Retrieve an item from localStorage with a default value
     const getItem = useCallback((key, defaultValue) => {
         if (typeof window === 'undefined') return defaultValue; // Handle server-side rendering
-        const item = localStorage.getItem(key);
         try {
+            const item = localStorage.getItem(key);
             return item ? JSON.parse(item) : defaultValue;
         } catch (e) {
-            console.error(`Error parsing localStorage item "${key}":`, e);
-            return defaultValue; // Return default value on parse failure
+            // Unparseable value, or storage blocked entirely (private browsing).
+            console.error(`Error reading localStorage item "${key}":`, e);
+            return defaultValue;
         }
     }, []);
 
     // Set an item in localStorage with JSON stringification
     const setItem = useCallback((key, value) => {
         if (typeof window === 'undefined') return; // Handle server-side rendering
-        localStorage.setItem(key, JSON.stringify(value));
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            // Quota exceeded or storage blocked: the app still works in-session.
+            console.error(`Error writing localStorage item "${key}":`, e);
+        }
     }, []);
 
     return { getItem, setItem };

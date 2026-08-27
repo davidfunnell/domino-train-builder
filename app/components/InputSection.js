@@ -4,7 +4,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Handles the input forms for setting the starting value and adding new dominoes.
@@ -18,7 +17,6 @@ export default function InputSection({ maxValue, onSetStartingValue, onAddDomino
     const [newHead, setNewHead] = useState('');
     const [newTail, setNewTail] = useState('');
     const [error, setError] = useState('');
-    const { darkMode } = useTheme();
 
     // add context for toast notifications
     const { showToast } = useToast();

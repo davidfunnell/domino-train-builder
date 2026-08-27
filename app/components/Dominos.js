@@ -1,19 +1,16 @@
 'use client';
 
-// Domino.js: A reusable component to display a single domino tile with a delete button
+// Dominos.js: A reusable component to display a single domino tile
 
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
 
 /**
- * Renders a domino tile with head (h) and tail (t) values and a delete button.
+ * Renders a domino tile with head (h) and tail (t) values.
  * @param {number} h - The head value of the domino.
  * @param {number} t - The tail value of the domino.
- * @param {function} onDelete - Callback to remove the domino when the delete button is clicked.
+ * @param {function} [onDelete] - Callback to remove the domino. Omit for a display-only tile.
  */
 export default function Domino({ h, t, onDelete }) {
-    const { darkMode } = useTheme();
-
     return (
         <div className="relative inline-block mx-2">
             {/* Domino tile with two sections for head and tail */}
@@ -26,12 +23,15 @@ export default function Domino({ h, t, onDelete }) {
                 </div>
             </div>
             {/* Delete button positioned at the top-right corner */}
-            <button
-                onClick={() => onDelete(h, t)}
-                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-            >
-                X
-            </button>
+            {onDelete && (
+                <button
+                    onClick={() => onDelete(h, t)}
+                    aria-label={`Remove domino ${h}-${t}`}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                    <span aria-hidden="true">X</span>
+                </button>
+            )}
         </div>
     );
 }

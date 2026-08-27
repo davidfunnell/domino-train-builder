@@ -11,7 +11,6 @@ import TotalSum from './components/TotalSum';
 import Settings from './components/Settings';
 import Link from 'next/link';
 import { useToast } from './contexts/ToastContext';
-import { useTheme } from './contexts/ThemeContext';
 
 /**
  * The main page component that orchestrates the Domino Train Builder functionality.
@@ -19,7 +18,6 @@ import { useTheme } from './contexts/ThemeContext';
 export default function Home() {
     // Hook for localStorage operations
     const { getItem, setItem } = useLocalStorage();
-    const { darkMode } = useTheme();
 
     // set variables with initial values from localStorage
     const [startingValue, setStartingValue] = useState(12);
@@ -67,51 +65,36 @@ export default function Home() {
         setStartingValue(value);
     };
 
+    // Match a domino regardless of which way round it was entered
+    const isSameDomino = ([a, b], h, t) => (a === h && b === t) || (a === t && b === h);
+
     // Add a new domino to the nodes list
     const addDomino = (h, t) => {
-        const exists = nodes.some(
-            ([a, b]) => (a === h && b === t) || (a === t && b === h)
-        );
-        if (exists) {
+        if (nodes.some((node) => isSameDomino(node, h, t))) {
             showToast('Domino already exists', 'error');
             return;
         }
         setNodes((prev) => [...prev, [h, t]]);
-        setLoadedLocalStorage(true);
     };
 
     // Delete a domino from the nodes list
     const deleteDomino = (h, t) => {
-        setNodes((prevNodes) => {
-            const newNodes = prevNodes.filter(
-                ([head, tail]) => !(head === h && tail === t) && !(head === t && tail === h)
-            );
-            // Update startingValue if the deleted domino affects the longest train
-            if (
-                startingValue !== null &&
-                dominoes.length > 0 &&
-                dominoes[0].length > 0
-            ) {
-                const longestTrain = dominoes[0];
-                const headDomino = longestTrain[0];
-                if (
-                    (headDomino[0] === h && headDomino[1] === t) ||
-                    (headDomino[0] === t && headDomino[1] === h)
-                ) {
-                    const newStartingValue = headDomino[1];
-                    setStartingValue(newStartingValue);
-                }
+        // If the deleted tile led the longest train, move the starting value on
+        // to whatever that train continued with.
+        const longestTrain = dominoes[0];
+        if (startingValue !== null && longestTrain && longestTrain.length > 0) {
+            const headDomino = longestTrain[0];
+            if (isSameDomino(headDomino, h, t)) {
+                setStartingValue(headDomino[1]);
             }
-            return newNodes;
-        });
-        setLoadedLocalStorage(true);
+        }
+        setNodes((prevNodes) => prevNodes.filter((node) => !isSameDomino(node, h, t)));
     };
 
     // Handle maxValue change from settings
     const handleMaxValueChange = (e) => {
         setMaxValue(Number(e.target.value));
         setShowSettings(false);
-        setLoadedLocalStorage(true);
     };
 
     // Reset all state and clear localStorage
@@ -124,7 +107,6 @@ export default function Home() {
             localStorage.removeItem('startingValue');
             localStorage.removeItem('maxValue');
         }
-        setLoadedLocalStorage(true);
     };
 
     return (
@@ -159,12 +141,14 @@ export default function Home() {
                 </Link>
                 <button
                     onClick={() => setShowSettings(!showSettings)}
+                    aria-expanded={showSettings}
                     className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold transition-all shadow-md"
                 >
                     Settings
                 </button>
                 <button
                     onClick={resetState}
+                    aria-label="Reset all dominoes"
                     className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition-all shadow-md"
                 >
                     Reset
